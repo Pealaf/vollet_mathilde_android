@@ -9,6 +9,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import com.google.android.material.snackbar.Snackbar
 import androidx.appcompat.app.AppCompatActivity
 import androidx.navigation.findNavController
@@ -21,12 +22,26 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import androidx.recyclerview.widget.RecyclerView
+import com.google.gson.Gson
 import fr.nextu.vollet_mathilde.databinding.ActivityMainBinding
+import fr.nextu.vollet_mathilde.entity.Movies
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.Response
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var appBarConfiguration: AppBarConfiguration
     private lateinit var binding: ActivityMainBinding
+
+    val db: AppDatabase by lazy {
+        AppDatabase.getInstance(applicationContext)
+    }
+    lateinit var movies_recycler: RecyclerView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -44,6 +59,11 @@ class MainActivity : AppCompatActivity() {
             Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
                 .setAction("Action", null)
                 .setAnchorView(R.id.fab).show()
+        }
+
+        movies_recycler = findViewById<RecyclerView>(R.id.movies_recylcer).apply {
+            adapter = MovieAdapter(emptyList())
+            layoutManager = androidx.recyclerview.widget.LinearLayoutManager(this@MainActivity)
         }
 
         createNotificationChannel()
@@ -70,6 +90,23 @@ class MainActivity : AppCompatActivity() {
         val navController = findNavController(R.id.nav_host_fragment_content_main)
         return navController.navigateUp(appBarConfiguration)
                 || super.onSupportNavigateUp()
+    }
+
+    override fun onStart() {
+        super.onStart()
+        updateViewFromDB()
+        requestMoviesList(::moviesFromJson)
+    }
+
+    fun updateViewFromDB() {
+        CoroutineScope(Dispatchers.IO).launch {
+            val flow = db.movieDao().getFlowData()
+            flow.collect{
+                CoroutineScope(Dispatchers.Main).launch {
+                    movies_recycler.adapter = MovieAdapter(it)
+                }
+            }
+        }
     }
 
     private fun createNotificationChannel() {
@@ -122,6 +159,29 @@ class MainActivity : AppCompatActivity() {
                 requestPermissionLauncher.launch(POST_NOTIFICATIONS)
             }
         }
+    }
+
+    fun requestMoviesList(callback: (String) -> Unit) {
+        CoroutineScope(Dispatchers.IO).launch{
+            val client = OkHttpClient()
+
+            val request: Request = Request.Builder()
+                .url("https://api.betaseries.com/movies/list")
+                .get()
+                .addHeader("X-BetaSeries-Key", getString(R.string.betaseries_api_key))
+                .build()
+
+            val response: Response = client.newCall(request).execute()
+
+            callback(response.body?.string() ?: "")
+        }
+    }
+
+    fun moviesFromJson(json: String) {
+        val gson = Gson()
+        val om = gson.fromJson(json,  Movies::class.java)
+        Log.d("tag", "moviesFromJson: ${om.movies.size}")
+        db.movieDao().insertAll(*om.movies.toTypedArray())
     }
 
     companion object {
