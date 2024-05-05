@@ -7,6 +7,9 @@
     <string name="next">Next</string>
     <string name="previous">Previous</string>
     <string name="second_activity">Second Activity</string>
+    <string name="new_notification_title">Nouvelle notification</string>
+    <string name="channel_name">New notification</string>
+    <string name="channel_description">A new notification</string>
 
     <string name="lorem_ipsum">
         Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam in scelerisque sem. Mauris

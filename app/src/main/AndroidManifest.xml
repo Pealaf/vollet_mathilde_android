@@ -13,14 +13,6 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.AppExemple"
         tools:targetApi="31">
-        <service
-            android:name=".BeersService"
-            android:exported="false"></service>
-
-        <activity
-            android:name=".MainActivity2"
-            android:exported="false"
-            android:theme="@style/Theme.AppExemple" />
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -32,6 +24,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <receiver android:name=".NotificationReceiver"/>
     </application>
 
 </manifest>
